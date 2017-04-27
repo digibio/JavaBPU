@@ -1,6 +1,7 @@
 package BPUControl;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.lang.Math;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -18,32 +19,62 @@ import com.serialpundit.serial.SerialComManager.STOPBITS;
  *
  */
 public final class BPUSerial implements Runnable {
+    private boolean logCommands = false;
+    private boolean logOutput = false;
+	private volatile boolean stop = false;
+    private volatile boolean topElectrode = true;
+    private volatile byte[] ChannelState;
+	
 	private byte[] dataRead;
     private String dataStr;
 
     private final SerialComManager scm;
-    private String output = "";
+    public String output = "";
     private long comPortHandle;
     private String status;
-    private final SignalExit exitTrigger;
     DATABITS databits = DATABITS.DB_8;
 	STOPBITS stopbits = STOPBITS.SB_1;
     PARITY parity = PARITY.P_NONE;
     BAUDRATE baudrate = BAUDRATE.B9600;
     
-    public BPUSerial(SignalExit exitTrigger) throws IOException {
+    public BPUSerial() throws IOException {
     	this.scm = new SerialComManager();
-        this.exitTrigger = exitTrigger;
     }
-
+    public void stopRunning() {
+    	System.out.println("stopping thread");
+    	this.stop = true;
+    }
     public void openComPort(String portName) throws SerialComException {
     	comPortHandle = scm.openComPort(portName, true, true, true);
         scm.configureComPortData(comPortHandle, databits, stopbits, parity, baudrate, 0);
-        this.run();
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e1) {}
     }
     
     public void closeComPort() throws SerialComException {
     	scm.closeComPort(comPortHandle);
+    }
+    /*
+     * enable this to print output of BPU to the console (default false)
+     */
+    public void setOutputLogging(boolean enable) {
+    	this.logOutput = enable;
+    }
+    /* 
+     * enable this to print commands sent to the BPU to the console (default false)
+     */
+    public void setCommandLogging(boolean enable) {
+    	this.logCommands = enable;
+    }
+    /* 
+     * enable this when you have a top layer on the biochip (default true)
+     */
+    public void setTopElectrode(boolean topElectrode) throws SerialComException {
+    	this.topElectrode = topElectrode;
+    	if(ChannelState.length > 0) {
+    		this.UpdateHV(ChannelState);
+    	}
     }
     public void SetDigipotState(int val) throws SerialComException {
     	WriteLine("pot " + Math.max(0, 127 - val));
@@ -57,30 +88,44 @@ public final class BPUSerial implements Runnable {
 	public void SetAC(Boolean enable) throws SerialComException {
 		WriteLine("polac " + (enable ? "1" : "0"));
 	}
-	public void UpdateHV(byte[] state, Boolean topElectrode) throws SerialComException
+	public void UpdateHV(byte[] state) throws SerialComException
 	{
-		byte[] values = state.clone();
+		byte[] values = Arrays.copyOf(state, 8);
 
-		// Ground plane bit
 		if (topElectrode)
 			values[7] |= 128;
 
 		String cmd = "hvset " + HelperMethods.bytesToHex(values);
 		WriteLine(cmd);
 	}
-
-    public void WriteLine(String input) throws SerialComException {
+	public void WriteLine(String input) throws SerialComException {
+		WriteLine(input, logCommands);
+	}
+    public void WriteLine(String input, boolean log) throws SerialComException {
+    	if(log) {
+    		System.out.println("Sending serial command: " + input);
+    	}
         scm.writeString(comPortHandle, input + "\n", 0);
+    }
+    
+    public String LastOutput() {
+    	String[] outputList = output.split("\n");
+    	try {
+    		return outputList[outputList.length - 1];
+    	} catch (Exception e) {
+    		return "no output";
+    	}
     }
     @Override
     public void run() {
-        while(exitTrigger.isExitTriggered() == false) {
-        	String updateStatus = "";
+    	String updateStatus = "";
+    	int outputCounter = 0;
+        while(!stop) {
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e1) {
-                if(exitTrigger.isExitTriggered() == true) {
-                    return;
+                if(stop) {
+                	return;
                 }
             }
             try {
@@ -88,23 +133,30 @@ public final class BPUSerial implements Runnable {
                 if(dataRead != null) {
                     dataStr = new String(dataRead);
                     output += dataStr;
-                    System.out.println(dataStr);
                 }
             } catch (SerialComException e) {
                 updateStatus = e.getExceptionMsg();
-                this.exitTrigger.setExitTrigger(true);
+                this.stopRunning();
         		e.printStackTrace();
 
             } catch (Exception e) {
                 updateStatus = e.getMessage();
-                this.exitTrigger.setExitTrigger(true);
+                this.stopRunning();
         		e.printStackTrace();
             }
             if(!updateStatus.equals(status)) {
             	status = updateStatus;
                 System.out.println(status);
             }
+			if (logOutput) {
+	            String[] outputLines = output.split("\n");
+            	while(outputCounter < outputLines.length - 1) {
+            		System.out.print(outputCounter + ": " + outputLines[outputCounter] + "\n");
+            		outputCounter++;
+            	}
+			}
         }
+        System.out.println("finished running");
     }
 
     public static String[] ListAvailablePorts() throws IOException {
@@ -115,18 +167,40 @@ public final class BPUSerial implements Runnable {
      * for testing purposes only
      */
     public static void main(String[] args) {
+    	BPUSerial bpu = null;
     	try {
 			String[] ports = ListAvailablePorts();
 			String port = ports[0];
-			System.out.println("application started, port = " + port);
-			SignalExit signalExit = new SignalExit(false);
-            BPUSerial bpu = new BPUSerial(signalExit);
+			System.out.println("example application started with BPU on port = " + port);
+            bpu = new BPUSerial();
             bpu.openComPort(port);
-            System.out.println(bpu.comPortHandle);
-            
-    	} catch (IOException e) {
+            Thread bpuThread = new Thread(bpu);
+            bpuThread.start();
+        	try {
+        	    Thread.sleep(1000);
+        	} catch(InterruptedException ex) {
+        	    Thread.currentThread().interrupt();
+        	}
+        	bpu.SetAC(true);
+        	bpu.EnableLog(true);
+        	bpu.SetDigipotState(111);
+        	bpu.UpdateHV(new byte[] {121,(byte)232});
+        	bpu.UpdateHV(new byte[] {1,3,7,15});
+        	bpu.SetAC(false);
+        	bpu.UpdateHV(new byte[] {121, 43, 45, 56});
+        	try {
+        	    Thread.sleep(4000);
+            	bpu.stopRunning();
+            	System.out.print(bpu.output);
+        	} catch(InterruptedException ex) {
+        	    Thread.currentThread().interrupt();
+        	}
+        	bpu.stopRunning();
+            System.out.println("finished application");
+    	} catch (Exception e) {
+    		bpu.stopRunning();
             System.out.println(e.getMessage());
-    		System.out.print(e.getStackTrace());
+            e.printStackTrace();
 		} 
     }
     private static class HelperMethods {
@@ -143,36 +217,5 @@ public final class BPUSerial implements Runnable {
 	        }
 	        return new String(hexChars);
 	    }
-    }
-}
-
-/*
- * This file is part of SerialPundit.
- * 
- * Copyright (C) 2014-2016, Rishi Gupta. All rights reserved.
- *
- * The SerialPundit is DUAL LICENSED. It is made available under the terms of the GNU Affero 
- * General Public License (AGPL) v3.0 for non-commercial use and under the terms of a commercial 
- * license for commercial use of this software. 
- * 
- * The SerialPundit is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
- * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- */
-
-
-final class SignalExit {
-
-    private volatile boolean exit;
-
-    public SignalExit(boolean exit) {
-        this.exit = exit;
-    }
-
-    public void setExitTrigger(boolean exit) {
-        this.exit = exit;
-    }
-
-    public boolean isExitTriggered() {
-        return exit;
     }
 }

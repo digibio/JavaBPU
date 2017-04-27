@@ -58,13 +58,14 @@ public final class DataPoller implements Runnable {
             try {
                 dataRead = scm.readBytes(comPortHandle, 10);
                 if(dataRead != null) {
-//                    text.setText("");
+                    text.setText("");
                     if(displayInHex == true) {
                         dataStr = SerialComUtil.byteArrayToHexString(dataRead, " ");
                     }else {
                         dataStr = new String(dataRead);
                     }
                     text.setText(dataStr);
+                    System.out.print(dataStr);
                 }
             } catch (SerialComException e) {
                 status.setText("");
