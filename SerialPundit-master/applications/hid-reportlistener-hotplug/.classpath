@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="C:/Users/xor/projects/JavaBpu/SerialPundit-master/prebuilt-release/sp-core.jar" sourcepath="C:/Users/xor/projects/JavaBpu/SerialPundit-master/prebuilt-release/sp-core.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/xor/projects/JavaBpu/SerialPundit-master/prebuilt-release/sp-core.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/xor/projects/JavaBpu/SerialPundit-master/prebuilt-release/sp-hid.jar" sourcepath="C:/Users/xor/projects/JavaBpu/SerialPundit-master/prebuilt-release/sp-hid.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/xor/projects/JavaBpu/SerialPundit-master/prebuilt-release/sp-hid.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/xor/projects/JavaBpu/SerialPundit-master/prebuilt-release/sp-usb.jar" sourcepath="C:/Users/xor/projects/JavaBpu/SerialPundit-master/prebuilt-release/sp-usb.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/xor/projects/JavaBpu/SerialPundit-master/prebuilt-release/sp-usb.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
