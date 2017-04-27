@@ -6,6 +6,7 @@ serial interface to control the BPU
 
 * create methods to store and return device status; right now everything is stored in a single output string
 * implement an interface to use data listener callback
+* add API description and BPU firmware version
 
 ## operation:
 
