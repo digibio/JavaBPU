@@ -1,12 +1,16 @@
 # JavaBPU
 
-serial interface to control the BPU
+class: 
+`src/BPUControl/BPUSerial.java`
+
+library to control the BPU through serial channel
 
 ## TODO / in progress:
 
 * create methods to store and return device status; right now everything is stored in a single output string
 * implement an interface to use data listener callback
 * add API description and BPU firmware version
+* add unit tests to test class
 
 ## operation:
 
