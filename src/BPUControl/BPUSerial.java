@@ -139,11 +139,7 @@ public final class BPUSerial implements Runnable {
                 this.stopRunning();
         		e.printStackTrace();
 
-            } catch (Exception e) {
-                updateStatus = e.getMessage();
-                this.stopRunning();
-        		e.printStackTrace();
-            }
+            } 
             if(!updateStatus.equals(status)) {
             	status = updateStatus;
                 System.out.println(status);
