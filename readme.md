@@ -28,5 +28,6 @@ bpuThread.start();
 the public string `bpu.output` gathers all output from the device. (In next revision this output will be interpreted and data stored in publicly accessible variables).
 
 use `setOutputLogging` to log BPU output to the console
+
 use `setCommandLogging` to log commands you send to the BPU
 
