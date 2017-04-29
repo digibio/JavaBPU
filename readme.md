@@ -7,10 +7,10 @@ library to control the BPU through serial channel
 
 ## TODO / in progress:
 
-* create methods to store and return device status; right now everything is stored in a single output string
 * implement an interface to use data listener callback
 * add API description and BPU firmware version
 * add unit tests to test class
+* implement an enum to standardize the commands to send through the serial
 
 ## operation:
 
@@ -25,7 +25,15 @@ Thread bpuThread = new Thread(bpu);
 bpuThread.start();
 ```
 
-the public string `bpu.output` gathers all output from the device. (In next revision this output will be interpreted and data stored in publicly accessible variables).
+the public string `bpu.output` gathers all output from the device. 
+
+using the method `getState` a certain state can be retreived from the BPU; like the value of the digipot:
+
+```
+String digipotstate = bpu.getState(Message.DIGIPOTSTATE);
+```
+
+
 
 use `setOutputLogging` to log BPU output to the console
 

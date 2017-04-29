@@ -2,7 +2,9 @@ package BPUControl;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.lang.Math;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -18,9 +20,30 @@ import com.serialpundit.serial.SerialComManager.STOPBITS;
  * @author Frido Emans
  *
  */
+
 public final class BPUSerial implements Runnable {
-    private boolean logCommands = false;
-    private boolean logOutput = false;
+	
+	private final String VERSION = "2.3";
+	private final String LINEBREAK = "\n";
+	
+	
+	public enum Message {
+		VERSION("BPU "),
+		ACSTATE("AC state: "),
+		HVENABLED("hv enabled: "),
+		DIGIPOTSTATE("state: ");
+		
+		private String message;
+		private Message(String message) {
+			this.message = message;
+		}
+		public String toString() {
+			return this.message;
+		}
+	}
+    
+	private boolean logCommands = false;
+    private boolean logOutput = true;
 	private volatile boolean stop = false;
     private volatile boolean topElectrode = true;
     private volatile byte[] ChannelState;
@@ -36,6 +59,17 @@ public final class BPUSerial implements Runnable {
 	STOPBITS stopbits = STOPBITS.SB_1;
     PARITY parity = PARITY.P_NONE;
     BAUDRATE baudrate = BAUDRATE.B9600;
+    
+    private Map<Message, String> BPUState = new EnumMap<Message, String>(Message.class);
+    
+    private void interpretOutput(String output) {
+    	for(Message M : Message.values()) {
+    		if(output.startsWith(M.message)) {
+    			String value = output.substring(M.message.length()).trim();
+    			BPUState.put(M, value);
+    		}
+    	}
+    }
     
     public BPUSerial() throws IOException {
     	this.scm = new SerialComManager();
@@ -98,18 +132,38 @@ public final class BPUSerial implements Runnable {
 		String cmd = "hvset " + HelperMethods.bytesToHex(values);
 		WriteLine(cmd);
 	}
+	/*
+	 * WriteLine: write a line through the serial to the BPU
+	 */
 	public void WriteLine(String input) throws SerialComException {
 		WriteLine(input, logCommands);
 	}
+	
     public void WriteLine(String input, boolean log) throws SerialComException {
     	if(log) {
     		System.out.println("Sending serial command: " + input);
     	}
-        scm.writeString(comPortHandle, input + "\n", 0);
+        scm.writeString(comPortHandle, input + LINEBREAK, 0);
     }
-    
+    /*
+     * check recorded version of BPU output against local constant VERSION
+     * 
+     * if no such record exists, return null
+     */
+    public Boolean checkVersion() {
+    	if(getState(Message.VERSION) == null) return null;
+    	return getState(Message.VERSION).equals(this.VERSION);
+    }
+    /*
+     * retrieve recorded state from BPU, indexed by the enum Message;
+     * 
+     * if no such state message has been recorded, return null
+     */
+    public String getState(Message M) {
+    	return this.BPUState.get(M);
+    }
     public String LastOutput() {
-    	String[] outputList = output.split("\n");
+    	String[] outputList = output.split(LINEBREAK);
     	try {
     		return outputList[outputList.length - 1];
     	} catch (Exception e) {
@@ -138,18 +192,18 @@ public final class BPUSerial implements Runnable {
                 updateStatus = e.getExceptionMsg();
                 this.stopRunning();
         		e.printStackTrace();
-
             } 
             if(!updateStatus.equals(status)) {
             	status = updateStatus;
                 System.out.println(status);
             }
-			if (logOutput) {
-	            String[] outputLines = output.split("\n");
-            	while(outputCounter < outputLines.length - 1) {
+            String[] outputLines = output.split(LINEBREAK);
+        	while(outputCounter < outputLines.length - 1) {
+        		interpretOutput(outputLines[outputCounter]);
+        		if (logOutput) {
             		System.out.print(outputCounter + ": " + outputLines[outputCounter] + "\n");
-            		outputCounter++;
             	}
+        		outputCounter++;
 			}
         }
         System.out.println("finished running");
@@ -178,11 +232,12 @@ public final class BPUSerial implements Runnable {
         	    Thread.currentThread().interrupt();
         	}
         	bpu.SetAC(true);
+        	
         	bpu.EnableLog(true);
         	bpu.SetDigipotState(111);
         	bpu.UpdateHV(new byte[] {121,(byte)232});
         	bpu.UpdateHV(new byte[] {1,3,7,15});
-        	bpu.SetAC(false);
+//        	bpu.SetAC(false);
         	bpu.UpdateHV(new byte[] {121, 43, 45, 56});
         	try {
         	    Thread.sleep(4000);
@@ -193,6 +248,12 @@ public final class BPUSerial implements Runnable {
         	}
         	bpu.stopRunning();
             System.out.println("finished application");
+            if(!bpu.checkVersion()) {
+            	System.out.println("Wrong firmware version detected: " + bpu.getState(Message.VERSION));
+            }
+            for(Message M : Message.values()) {
+            	System.out.println(">>>"+M + ": " + bpu.getState(M) + "<<<");
+            }
     	} catch (Exception e) {
     		bpu.stopRunning();
             System.out.println(e.getMessage());
