@@ -1,14 +1,17 @@
 # JavaBPU
 
+Serial API version 2.0.1
+
 class: 
 `src/BPUControl/BPUSerial.java`
 
 library to control the BPU through serial channel
 
+binary included for arduino nano
+
 ## TODO / in progress:
 
 * implement an interface to use data listener callback
-* add API description and BPU firmware version
 * add unit tests to test class
 * implement an enum to standardize the commands to send through the serial
 

@@ -23,16 +23,19 @@ import com.serialpundit.serial.SerialComManager.STOPBITS;
 
 public final class BPUSerial implements Runnable {
 	
-	private final String VERSION = "2.3";
+	private final String API_VERSION = "2.0.1";
 	private final String LINEBREAK = "\n";
 	
 	
 	public enum Message {
-		VERSION("BPU "),
-		ACSTATE("AC state: "),
-		HVENABLED("hv enabled: "),
-		DIGIPOTSTATE("state: ");
-		
+		API_VERSION("API version: "), 
+		BPU_VERSION("BPU version: "),
+		AC_STATE("AC state: "), // AC has been switched on
+		HV_ENABLED("HV enabled: "), // High voltage switched on
+		PINSTATE("pin state: "), // high voltage pinout setting in binary
+		HV_REPORTED("LOG "), // measured output voltage: only available when log is enabled
+		VIN_REPORTED("LOG "), // measured input voltage: only available when log is enabled
+		DIGIPOTSTATE("pot state: "); // state of the pot that sets the voltage
 		private String message;
 		private Message(String message) {
 			this.message = message;
@@ -43,7 +46,9 @@ public final class BPUSerial implements Runnable {
 	}
     
 	private boolean logCommands = false;
-    private boolean logOutput = true;
+    private boolean logOutput = false;
+    private boolean logStore = false; // log whenever a logged value is stored as a variable
+    
 	private volatile boolean stop = false;
     private volatile boolean topElectrode = true;
     private volatile byte[] ChannelState;
@@ -65,8 +70,16 @@ public final class BPUSerial implements Runnable {
     private void interpretOutput(String output) {
     	for(Message M : Message.values()) {
     		if(output.startsWith(M.message)) {
-    			String value = output.substring(M.message.length()).trim();
+    			String value;
+    			if(M == Message.HV_REPORTED) {
+    				value = output.substring(output.indexOf(";")).trim();
+    			}
+    			else if(M == Message.VIN_REPORTED) {
+    				value = output.substring(M.message.length(), output.indexOf(";"));
+    			} 
+    			else value = output.substring(M.message.length()).trim();
     			BPUState.put(M, value);
+    			if(logStore) System.out.println("Storing variable: " + M.name() + ": " + value);
     		}
     	}
     }
@@ -151,8 +164,8 @@ public final class BPUSerial implements Runnable {
      * if no such record exists, return null
      */
     public Boolean checkVersion() {
-    	if(getState(Message.VERSION) == null) return null;
-    	return getState(Message.VERSION).equals(this.VERSION);
+    	if(getState(Message.API_VERSION) == null) return null;
+    	return getState(Message.API_VERSION).equals(this.API_VERSION);
     }
     /*
      * retrieve recorded state from BPU, indexed by the enum Message;
@@ -249,7 +262,7 @@ public final class BPUSerial implements Runnable {
         	bpu.stopRunning();
             System.out.println("finished application");
             if(!bpu.checkVersion()) {
-            	System.out.println("Wrong firmware version detected: " + bpu.getState(Message.VERSION));
+            	System.out.println("Wrong firmware version detected: " + bpu.getState(Message.API_VERSION));
             }
             for(Message M : Message.values()) {
             	System.out.println(">>>"+M + ": " + bpu.getState(M) + "<<<");
