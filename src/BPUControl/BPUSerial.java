@@ -25,7 +25,7 @@ import com.serialpundit.serial.SerialComManager.STOPBITS;
  *
  */
 
-public final class BPUSerial implements Runnable {
+public final class BPUSerial implements Runnable, BPUControl {
 	
 	private final String API_VERSION = "2.0.1";
 	private final String LINEBREAK = "\n";
@@ -90,7 +90,11 @@ public final class BPUSerial implements Runnable {
     public BPUSerial() throws IOException {
     	this.scm = new SerialComManager();
     }
-    public void stopRunning() {
+    /* (non-Javadoc)
+	 * @see BPUControl.BPUControl#stopRunning()
+	 */
+    @Override
+	public void stopRunning() {
     	System.out.println("stopping thread");
     	this.stop = true;
     }
@@ -110,7 +114,11 @@ public final class BPUSerial implements Runnable {
      * 
      * previously: setOutputLogging
      */
-    public void toggleOutputLogging(boolean enable) {
+    /* (non-Javadoc)
+	 * @see BPUControl.BPUControl#toggleOutputLogging(boolean)
+	 */
+    @Override
+	public void toggleOutputLogging(boolean enable) {
     	this.logOutput = enable;
     }
     /* 
@@ -118,7 +126,11 @@ public final class BPUSerial implements Runnable {
      * 
      * previously: setCommandLogging
      */
-    public void toggleCommandLogging(boolean enable) {
+    /* (non-Javadoc)
+	 * @see BPUControl.BPUControl#toggleCommandLogging(boolean)
+	 */
+    @Override
+	public void toggleCommandLogging(boolean enable) {
     	this.logCommands = enable;
     }
     /* 
@@ -126,7 +138,11 @@ public final class BPUSerial implements Runnable {
      * 
      * previously: setTopElectrode
      */
-    public void toggleTopElectrode(boolean enabled) throws SerialComException {
+    /* (non-Javadoc)
+	 * @see BPUControl.BPUControl#toggleTopElectrode(boolean)
+	 */
+    @Override
+	public void toggleTopElectrode(boolean enabled) throws SerialComException {
     	this.topElectrode = enabled;
     	if(ChannelState.length > 0) {
     		this.updateChannels(ChannelState);
@@ -138,7 +154,11 @@ public final class BPUSerial implements Runnable {
      * 
      * previously: SetDigiPotState
      */
-    public void setVoltageControl(int val) throws SerialComException {
+    /* (non-Javadoc)
+	 * @see BPUControl.BPUControl#setVoltageControl(int)
+	 */
+    @Override
+	public void setVoltageControl(int val) throws SerialComException {
     	sendLine("pot " + Math.max(0, 127 - val));
 	}
     /*
@@ -146,7 +166,11 @@ public final class BPUSerial implements Runnable {
      * 
      * previously: EnableHighVoltage
      */
-    public void toggleHighVoltage(Boolean enable) throws SerialComException {
+    /* (non-Javadoc)
+	 * @see BPUControl.BPUControl#toggleHighVoltage(java.lang.Boolean)
+	 */
+    @Override
+	public void toggleHighVoltage(Boolean enable) throws SerialComException {
 		sendLine("hvgen " + (enable ? "1" : "0"));
 	}
     /*
@@ -154,7 +178,11 @@ public final class BPUSerial implements Runnable {
      * 
      * previously: EnableLog
      */
-    public void toggleVoltageLog(Boolean enable) throws SerialComException {
+    /* (non-Javadoc)
+	 * @see BPUControl.BPUControl#toggleVoltageLog(java.lang.Boolean)
+	 */
+    @Override
+	public void toggleVoltageLog(Boolean enable) throws SerialComException {
 		sendLine("log " + (enable ? "1" : "0"));
 	}
     /*
@@ -162,6 +190,10 @@ public final class BPUSerial implements Runnable {
      * 
      * previously called: SetAC
      */
+	/* (non-Javadoc)
+	 * @see BPUControl.BPUControl#toggleAC(java.lang.Boolean)
+	 */
+	@Override
 	public void toggleAC(Boolean enable) throws SerialComException {
 		sendLine("polac " + (enable ? "1" : "0"));
 	}
@@ -170,6 +202,10 @@ public final class BPUSerial implements Runnable {
 	 * 
 	 * previously called: UpdateHV
 	 */
+	/* (non-Javadoc)
+	 * @see BPUControl.BPUControl#updateChannels(byte[])
+	 */
+	@Override
 	public void updateChannels(byte[] state) throws SerialComException
 	{
 		byte[] values = Arrays.copyOf(state, 8);
@@ -178,6 +214,10 @@ public final class BPUSerial implements Runnable {
 	/*
 	 * select which channels of the device get switched on and off using a 	hexadecimal number
 	 */
+	/* (non-Javadoc)
+	 * @see BPUControl.BPUControl#updateChannels(java.lang.String)
+	 */
+	@Override
 	public void updateChannels(String hex) throws SerialComException {
 		String cmd = "hvset " + hex;
 		sendLine(cmd);
@@ -187,22 +227,26 @@ public final class BPUSerial implements Runnable {
 	 * 
 	 * previously called: WriteLine
 	 */
+	/* (non-Javadoc)
+	 * @see BPUControl.BPUControl#sendLine(java.lang.String)
+	 */
+	@Override
 	public void sendLine(String input) throws SerialComException {
-		sendLine(input, logCommands);
-	}
-	
-    public void sendLine(String input, boolean log) throws SerialComException {
-    	if(log) {
+		if(logCommands) {
     		System.out.println("Sending serial command: " + input);
     	}
-        scm.writeString(comPortHandle, input + LINEBREAK, 0);
-    }
+		sendLine(input);
+	}
     /*
      * check recorded version of BPU output against local constant VERSION
      * 
      * if no such record exists, return null
      */
-    public Boolean checkVersion() {
+    /* (non-Javadoc)
+	 * @see BPUControl.BPUControl#checkVersion()
+	 */
+    @Override
+	public Boolean checkVersion() {
     	if(getState(Message.API_VERSION) == null) return null;
     	return getState(Message.API_VERSION).equals(this.API_VERSION);
     }
@@ -211,7 +255,11 @@ public final class BPUSerial implements Runnable {
      * 
      * if no such state message has been recorded, return null
      */
-    public String getState(Message M) {
+    /* (non-Javadoc)
+	 * @see BPUControl.BPUControl#getState(BPUControl.BPUSerial.Message)
+	 */
+    @Override
+	public String getState(Message M) {
     	return this.BPUState.get(M);
     }
     /* previously called LastOutput */
@@ -224,6 +272,9 @@ public final class BPUSerial implements Runnable {
     	}
     }
     
+    /* (non-Javadoc)
+	 * @see BPUControl.BPUControl#run()
+	 */
     @Override
     public void run() {
     	String updateStatus = "";
