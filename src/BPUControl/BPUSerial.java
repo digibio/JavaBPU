@@ -203,17 +203,15 @@ public final class BPUSerial implements Runnable {
      * if no such record exists, return null
      */
     public Boolean checkVersion() {
-    	if(getChannels(Message.API_VERSION) == null) return null;
-    	return getChannels(Message.API_VERSION).equals(this.API_VERSION);
+    	if(getState(Message.API_VERSION) == null) return null;
+    	return getState(Message.API_VERSION).equals(this.API_VERSION);
     }
     /*
      * retrieve recorded state from BPU, indexed by the enum Message;
      * 
      * if no such state message has been recorded, return null
-     * 
-     * previously called: getState
      */
-    public String getChannels(Message M) {
+    public String getState(Message M) {
     	return this.BPUState.get(M);
     }
     /* previously called LastOutput */
@@ -310,10 +308,10 @@ public final class BPUSerial implements Runnable {
         	bpu.stopRunning();
             System.out.println("finished application");
             if(!bpu.checkVersion()) {
-            	System.out.println("Wrong firmware version detected: " + bpu.getChannels(Message.API_VERSION));
+            	System.out.println("Wrong firmware version detected: " + bpu.getState(Message.API_VERSION));
             }
             for(Message M : Message.values()) {
-            	System.out.println(">>>"+M + ": " + bpu.getChannels(M) + "<<<");
+            	System.out.println(">>>"+M + ": " + bpu.getState(M) + "<<<");
             }
     	} catch (Exception e) {
     		bpu.stopRunning();
