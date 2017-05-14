@@ -18,6 +18,10 @@ import com.serialpundit.serial.SerialComManager.PARITY;
 import com.serialpundit.serial.SerialComManager.STOPBITS;
 /**
  * @author Frido Emans
+ * 
+ * version 0.1.0
+ * 
+ * license: MIT
  *
  */
 
@@ -145,7 +149,6 @@ public final class BPUSerial implements Runnable {
     public void toggleHighVoltage(Boolean enable) throws SerialComException {
 		sendLine("hvgen " + (enable ? "1" : "0"));
 	}
-    
     /*
      * switch status reports of BPU of the meaured voltage
      * 
@@ -154,7 +157,6 @@ public final class BPUSerial implements Runnable {
     public void toggleVoltageLog(Boolean enable) throws SerialComException {
 		sendLine("log " + (enable ? "1" : "0"));
 	}
-    
     /*
      * switch AC on and off
      * 
