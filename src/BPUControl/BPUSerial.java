@@ -75,7 +75,7 @@ public final class BPUSerial implements Runnable {
     				value = output.substring(output.indexOf(";")).trim();
     			}
     			else if(M == Message.VIN_REPORTED) {
-    				value = output.substring(M.message.length(), output.indexOf(";"));
+    				value = output.substring(M.message.length(), output.lastIndexOf(" "));
     			} 
     			else value = output.substring(M.message.length()).trim();
     			BPUState.put(M, value);
