@@ -55,7 +55,7 @@ public class BPUSerialTest {
 	public void testStaticListComports() {
 		String[] comports = null;
 		try {
-			comports = BPUSerial.ListAvailablePorts();
+			comports = BPUSerial.listAvailablePorts();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

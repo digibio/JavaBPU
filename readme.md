@@ -33,12 +33,7 @@ the public string `bpu.output` gathers all output from the device.
 using the method `getState` a certain state can be retreived from the BPU; like the value of the digipot:
 
 ```
-String digipotstate = bpu.getState(Message.DIGIPOTSTATE);
+String voltage = bpu.getState(Message.VOLTAGECONTROLSTATE);
 ```
 
-
-
-use `setOutputLogging` to log BPU output to the console
-
-use `setCommandLogging` to log commands you send to the BPU
-
+License: MIT

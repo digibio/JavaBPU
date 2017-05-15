@@ -18,14 +18,17 @@ import com.serialpundit.serial.SerialComManager.PARITY;
 import com.serialpundit.serial.SerialComManager.STOPBITS;
 /**
  * @author Frido Emans
+ * 
+ * version 0.1.0
+ * 
+ * license: MIT
  *
  */
 
-public final class BPUSerial implements Runnable {
+public final class BPUSerial implements Runnable, BPUControl {
 	
 	private final String API_VERSION = "2.0.1";
 	private final String LINEBREAK = "\n";
-	
 	
 	public enum Message {
 		API_VERSION("API version: "), 
@@ -35,7 +38,7 @@ public final class BPUSerial implements Runnable {
 		PINSTATE("pin state: "), // high voltage pinout setting in binary
 		HV_REPORTED("LOG "), // measured output voltage: only available when log is enabled
 		VIN_REPORTED("LOG "), // measured input voltage: only available when log is enabled
-		DIGIPOTSTATE("pot state: "); // state of the pot that sets the voltage
+		VOLTAGECONTROLSTATE("pot state: "); // state of the pot that sets the voltage
 		private String message;
 		private Message(String message) {
 			this.message = message;
@@ -87,7 +90,11 @@ public final class BPUSerial implements Runnable {
     public BPUSerial() throws IOException {
     	this.scm = new SerialComManager();
     }
-    public void stopRunning() {
+    /* (non-Javadoc)
+	 * @see BPUControl.BPUControl#stopRunning()
+	 */
+    @Override
+	public void stopRunning() {
     	System.out.println("stopping thread");
     	this.stop = true;
     }
@@ -104,66 +111,142 @@ public final class BPUSerial implements Runnable {
     }
     /*
      * enable this to print output of BPU to the console (default false)
+     * 
+     * previously: setOutputLogging
      */
-    public void setOutputLogging(boolean enable) {
+    /* (non-Javadoc)
+	 * @see BPUControl.BPUControl#toggleOutputLogging(boolean)
+	 */
+    @Override
+	public void toggleOutputLogging(boolean enable) {
     	this.logOutput = enable;
     }
     /* 
      * enable this to print commands sent to the BPU to the console (default false)
+     * 
+     * previously: setCommandLogging
      */
-    public void setCommandLogging(boolean enable) {
+    /* (non-Javadoc)
+	 * @see BPUControl.BPUControl#toggleCommandLogging(boolean)
+	 */
+    @Override
+	public void toggleCommandLogging(boolean enable) {
     	this.logCommands = enable;
     }
     /* 
      * enable this when you have a top layer on the biochip (default true)
+     * 
+     * previously: setTopElectrode
      */
-    public void setTopElectrode(boolean topElectrode) throws SerialComException {
-    	this.topElectrode = topElectrode;
+    /* (non-Javadoc)
+	 * @see BPUControl.BPUControl#toggleTopElectrode(boolean)
+	 */
+    @Override
+	public void toggleTopElectrode(boolean enabled) throws SerialComException {
+    	this.topElectrode = enabled;
     	if(ChannelState.length > 0) {
-    		this.UpdateHV(ChannelState);
+    		this.updateChannels(ChannelState);
     	}
     }
-    public void SetDigipotState(int val) throws SerialComException {
-    	WriteLine("pot " + Math.max(0, 127 - val));
+    
+    /*
+     * send signal to set the voltage; use number between 0 and 127
+     * 
+     * previously: SetDigiPotState
+     */
+    /* (non-Javadoc)
+	 * @see BPUControl.BPUControl#setVoltageControl(int)
+	 */
+    @Override
+	public void setVoltageControl(int val) throws SerialComException {
+    	sendLine("pot " + Math.max(0, 127 - val));
 	}
-    public void EnableHighVoltage(Boolean enable) throws SerialComException {
-		WriteLine("hvgen " + (enable ? "1" : "0"));
+    /*
+     * switch HV on and off in the BPU
+     * 
+     * previously: EnableHighVoltage
+     */
+    /* (non-Javadoc)
+	 * @see BPUControl.BPUControl#toggleHighVoltage(java.lang.Boolean)
+	 */
+    @Override
+	public void toggleHighVoltage(Boolean enable) throws SerialComException {
+		sendLine("hvgen " + (enable ? "1" : "0"));
 	}
-    public void EnableLog(Boolean enable) throws SerialComException {
-		WriteLine("log " + (enable ? "1" : "0"));
+    /*
+     * switch status reports of BPU of the meaured voltage
+     * 
+     * previously: EnableLog
+     */
+    /* (non-Javadoc)
+	 * @see BPUControl.BPUControl#toggleVoltageLog(java.lang.Boolean)
+	 */
+    @Override
+	public void toggleVoltageLog(Boolean enable) throws SerialComException {
+		sendLine("log " + (enable ? "1" : "0"));
 	}
-	public void SetAC(Boolean enable) throws SerialComException {
-		WriteLine("polac " + (enable ? "1" : "0"));
-	}
-	public void UpdateHV(byte[] state) throws SerialComException
-	{
-		byte[] values = Arrays.copyOf(state, 8);
-
-		if (topElectrode)
-			values[7] |= 128;
-
-		String cmd = "hvset " + HelperMethods.bytesToHex(values);
-		WriteLine(cmd);
+    /*
+     * switch AC on and off
+     * 
+     * previously called: SetAC
+     */
+	/* (non-Javadoc)
+	 * @see BPUControl.BPUControl#toggleAC(java.lang.Boolean)
+	 */
+	@Override
+	public void toggleAC(Boolean enable) throws SerialComException {
+		sendLine("polac " + (enable ? "1" : "0"));
 	}
 	/*
-	 * WriteLine: write a line through the serial to the BPU
+	 * select which channels of the device get switched on and off using byte array
+	 * 
+	 * previously called: UpdateHV
 	 */
-	public void WriteLine(String input) throws SerialComException {
-		WriteLine(input, logCommands);
+	/* (non-Javadoc)
+	 * @see BPUControl.BPUControl#updateChannels(byte[])
+	 */
+	@Override
+	public void updateChannels(byte[] state) throws SerialComException
+	{
+		byte[] values = Arrays.copyOf(state, 8);
+		updateChannels(HelperMethods.bytesToHex(values));
 	}
-	
-    public void WriteLine(String input, boolean log) throws SerialComException {
-    	if(log) {
+	/*
+	 * select which channels of the device get switched on and off using a 	hexadecimal number
+	 */
+	/* (non-Javadoc)
+	 * @see BPUControl.BPUControl#updateChannels(java.lang.String)
+	 */
+	@Override
+	public void updateChannels(String hex) throws SerialComException {
+		String cmd = "hvset " + hex;
+		sendLine(cmd);
+	}
+	/*
+	 * write a line through the serial to the BPU
+	 * 
+	 * previously called: WriteLine
+	 */
+	/* (non-Javadoc)
+	 * @see BPUControl.BPUControl#sendLine(java.lang.String)
+	 */
+	@Override
+	public void sendLine(String input) throws SerialComException {
+		if(logCommands) {
     		System.out.println("Sending serial command: " + input);
     	}
-        scm.writeString(comPortHandle, input + LINEBREAK, 0);
-    }
+		sendLine(input);
+	}
     /*
      * check recorded version of BPU output against local constant VERSION
      * 
      * if no such record exists, return null
      */
-    public Boolean checkVersion() {
+    /* (non-Javadoc)
+	 * @see BPUControl.BPUControl#checkVersion()
+	 */
+    @Override
+	public Boolean checkVersion() {
     	if(getState(Message.API_VERSION) == null) return null;
     	return getState(Message.API_VERSION).equals(this.API_VERSION);
     }
@@ -172,10 +255,15 @@ public final class BPUSerial implements Runnable {
      * 
      * if no such state message has been recorded, return null
      */
-    public String getState(Message M) {
+    /* (non-Javadoc)
+	 * @see BPUControl.BPUControl#getState(BPUControl.BPUSerial.Message)
+	 */
+    @Override
+	public String getState(Message M) {
     	return this.BPUState.get(M);
     }
-    public String LastOutput() {
+    /* previously called LastOutput */
+    public String lastOutput() {
     	String[] outputList = output.split(LINEBREAK);
     	try {
     		return outputList[outputList.length - 1];
@@ -183,6 +271,10 @@ public final class BPUSerial implements Runnable {
     		return "no output";
     	}
     }
+    
+    /* (non-Javadoc)
+	 * @see BPUControl.BPUControl#run()
+	 */
     @Override
     public void run() {
     	String updateStatus = "";
@@ -222,7 +314,12 @@ public final class BPUSerial implements Runnable {
         System.out.println("finished running");
     }
 
-    public static String[] ListAvailablePorts() throws IOException {
+    /* 
+     * list ports with usb devices connected
+     * 
+     * previously called: ListAvailablePorts
+     */
+    public static String[] listAvailablePorts() throws IOException {
         SerialComManager scm = new SerialComManager();
         return scm.listAvailableComPorts();
 	}
@@ -232,7 +329,7 @@ public final class BPUSerial implements Runnable {
     public static void main(String[] args) {
     	BPUSerial bpu = null;
     	try {
-			String[] ports = ListAvailablePorts();
+			String[] ports = listAvailablePorts();
 			String port = ports[0];
 			System.out.println("example application started with BPU on port = " + port);
             bpu = new BPUSerial();
@@ -244,14 +341,14 @@ public final class BPUSerial implements Runnable {
         	} catch(InterruptedException ex) {
         	    Thread.currentThread().interrupt();
         	}
-        	bpu.SetAC(true);
+        	bpu.toggleAC(true);
         	
-        	bpu.EnableLog(true);
-        	bpu.SetDigipotState(111);
-        	bpu.UpdateHV(new byte[] {121,(byte)232});
-        	bpu.UpdateHV(new byte[] {1,3,7,15});
+        	bpu.toggleOutputLogging(true);
+        	bpu.setVoltageControl(111);
+        	bpu.updateChannels(new byte[] {121,(byte)232});
+        	bpu.updateChannels(new byte[] {1,3,7,15});
 //        	bpu.SetAC(false);
-        	bpu.UpdateHV(new byte[] {121, 43, 45, 56});
+        	bpu.updateChannels(new byte[] {121, 43, 45, 56});
         	try {
         	    Thread.sleep(4000);
             	bpu.stopRunning();
