@@ -158,8 +158,8 @@ public final class BPUSerial implements Runnable, BPUControl {
 	 * @see BPUControl.BPUControl#setVoltageControl(int)
 	 */
     @Override
-	public void setVoltageControl(int val) throws SerialComException {
-    	sendLine("pot " + Math.max(0, 127 - val));
+	public void setTargetVoltage(int voltage) throws SerialComException {
+    	sendLine("hv vol " + voltage);
 	}
     /*
      * switch HV on and off in the BPU
@@ -171,8 +171,10 @@ public final class BPUSerial implements Runnable, BPUControl {
 	 */
     @Override
 	public void toggleHighVoltage(Boolean enable) throws SerialComException {
-		sendLine("hvgen " + (enable ? "1" : "0"));
+		sendLine("hv gen " + (enable ? "1" : "0"));
 	}
+	
+	
     /*
      * switch status reports of BPU of the meaured voltage
      * 
@@ -208,8 +210,8 @@ public final class BPUSerial implements Runnable, BPUControl {
 	@Override
 	public void updateChannels(byte[] state) throws SerialComException
 	{
-		byte[] values = Arrays.copyOf(state, 8);
-		updateChannels(HelperMethods.bytesToHex(values));
+//		byte[] values = Arrays.copyOf(state, 16);
+		updateChannels(HelperMethods.bytesToHex(state));
 	}
 	/*
 	 * select which channels of the device get switched on and off using a 	hexadecimal number
@@ -344,7 +346,8 @@ public final class BPUSerial implements Runnable, BPUControl {
         	bpu.toggleAC(true);
         	
         	bpu.toggleOutputLogging(true);
-        	bpu.setVoltageControl(111);
+			bpu.toggleHighVoltage(true);
+			bpu.setTargetVoltage(111);
         	bpu.updateChannels(new byte[] {121,(byte)232});
         	bpu.updateChannels(new byte[] {1,3,7,15});
 //        	bpu.SetAC(false);

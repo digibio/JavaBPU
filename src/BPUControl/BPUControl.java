@@ -24,15 +24,15 @@ public interface BPUControl {
 	void toggleTopElectrode(boolean enabled) throws SerialComException;
 
 	/*
-	 * send signal to set the voltage; use number between 0 and 127
+	 * set the target voltage for the high voltage generator
 	 */
-	void setVoltageControl(int val) throws SerialComException;
+	void setTargetVoltage(int voltage) throws SerialComException;
 
 	/*
 	 * switch HV on and off in the BPU
 	 */
 	void toggleHighVoltage(Boolean enable) throws SerialComException;
-
+	
 	/*
 	 * switch status reports of BPU of the meaured voltage
 	 */
