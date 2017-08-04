@@ -1,5 +1,4 @@
-package BPUControl;
-
+package bio.digi.bpucontrol;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumMap;
@@ -25,29 +24,11 @@ import com.serialpundit.serial.SerialComManager.STOPBITS;
  *
  */
 
-public final class BPUSerial implements Runnable, BPUControl {
+public final class BPUControlSerial implements Runnable, BPUControl {
 	
 	private final String API_VERSION = "2.0.1";
 	private final String LINEBREAK = "\n";
 	
-	public enum Message {
-		API_VERSION("API version: "), 
-		BPU_VERSION("BPU version: "),
-		AC_STATE("AC state: "), // AC has been switched on
-		HV_ENABLED("HV enabled: "), // High voltage switched on
-		PINSTATE("pin state: "), // high voltage pinout setting in binary
-		HV_REPORTED("LOG "), // measured output voltage: only available when log is enabled
-		VIN_REPORTED("LOG "), // measured input voltage: only available when log is enabled
-		VOLTAGECONTROLSTATE("pot state: "); // state of the pot that sets the voltage
-		private String message;
-		private Message(String message) {
-			this.message = message;
-		}
-		public String toString() {
-			return this.message;
-		}
-	}
-    
 	private boolean logCommands = false;
     private boolean logOutput = false;
     private boolean logStore = false; // log whenever a logged value is stored as a variable
@@ -68,16 +49,16 @@ public final class BPUSerial implements Runnable, BPUControl {
     PARITY parity = PARITY.P_NONE;
     BAUDRATE baudrate = BAUDRATE.B9600;
     
-    private Map<Message, String> BPUState = new EnumMap<Message, String>(Message.class);
+    private Map<APIMessage, String> BPUState = new EnumMap<APIMessage, String>(APIMessage.class);
     
     private void interpretOutput(String output) {
-    	for(Message M : Message.values()) {
+    	for(APIMessage M : APIMessage.values()) {
     		if(output.startsWith(M.message)) {
     			String value;
-    			if(M == Message.HV_REPORTED) {
+    			if(M == APIMessage.HV_REPORTED) {
     				value = output.substring(output.indexOf(";")).trim();
     			}
-    			else if(M == Message.VIN_REPORTED) {
+    			else if(M == APIMessage.VIN_REPORTED) {
     				value = output.substring(M.message.length(), output.lastIndexOf(" "));
     			} 
     			else value = output.substring(M.message.length()).trim();

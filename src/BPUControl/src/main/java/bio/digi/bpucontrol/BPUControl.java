@@ -1,8 +1,5 @@
-package BPUControl;
-
+package bio.digi.bpucontrol;
 import com.serialpundit.core.SerialComException;
-
-import BPUControl.BPUSerial.Message;
 
 public interface BPUControl {
 
@@ -70,7 +67,7 @@ public interface BPUControl {
 	 * 
 	 * if no such state message has been recorded, return null
 	 */
-	String getState(Message M);
+	String getState(APIMessage M);
 
 	void run();
 

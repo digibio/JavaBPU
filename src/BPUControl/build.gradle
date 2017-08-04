@@ -1,0 +1,24 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+archivesBaseName = 'JavaBPU'
+version = '1.0-SNAPSHOT' 
+
+repositories {
+    mavenCentral()
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'WebConnector'
+    }
+}
+
+dependencies {
+    compile  'log4j:log4j:1.2.16'
+    compile 'org.bidib.com.serialpundit:sp-core:1.0.4'
+    //compile 'org.bidib.com.serialpundit:sp-serial:1.0.4'
+    compile ('io.socket:socket.io-client:1.0.0') {
+         // excluding org.json which is provided by Android
+        exclude group: 'org.json', module: 'json'
+    }
+} 
