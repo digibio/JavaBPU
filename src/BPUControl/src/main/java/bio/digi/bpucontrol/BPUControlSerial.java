@@ -1,14 +1,9 @@
 package bio.digi.bpucontrol;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.EnumMap;
-import java.util.List;
 import java.util.Map;
-import java.lang.Math;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.serialpundit.core.SerialComException;
-import com.serialpundit.core.util.SerialComUtil;
 import com.serialpundit.serial.SerialComManager;
 import com.serialpundit.serial.SerialComManager.BAUDRATE;
 import com.serialpundit.serial.SerialComManager.DATABITS;
@@ -68,7 +63,7 @@ public final class BPUControlSerial implements Runnable, BPUControl {
     	}
     }
     
-    public BPUSerial() throws IOException {
+    public BPUControlSerial() throws IOException {
     	this.scm = new SerialComManager();
     }
     /* (non-Javadoc)
@@ -230,8 +225,8 @@ public final class BPUControlSerial implements Runnable, BPUControl {
 	 */
     @Override
 	public Boolean checkVersion() {
-    	if(getState(Message.API_VERSION) == null) return null;
-    	return getState(Message.API_VERSION).equals(this.API_VERSION);
+    	if(getState(APIMessage.API_VERSION) == null) return null;
+    	return getState(APIMessage.API_VERSION).equals(this.API_VERSION);
     }
     /*
      * retrieve recorded state from BPU, indexed by the enum Message;
@@ -242,7 +237,7 @@ public final class BPUControlSerial implements Runnable, BPUControl {
 	 * @see BPUControl.BPUControl#getState(BPUControl.BPUSerial.Message)
 	 */
     @Override
-	public String getState(Message M) {
+	public String getState(APIMessage M) {
     	return this.BPUState.get(M);
     }
     /* previously called LastOutput */
@@ -310,12 +305,12 @@ public final class BPUControlSerial implements Runnable, BPUControl {
      * for testing purposes only
      */
     public static void main(String[] args) {
-    	BPUSerial bpu = null;
+    	BPUControlSerial bpu = null;
     	try {
 			String[] ports = listAvailablePorts();
 			String port = ports[0];
 			System.out.println("example application started with BPU on port = " + port);
-            bpu = new BPUSerial();
+            bpu = new BPUControlSerial();
             bpu.openComPort(port);
             Thread bpuThread = new Thread(bpu);
             bpuThread.start();
@@ -343,9 +338,9 @@ public final class BPUControlSerial implements Runnable, BPUControl {
         	bpu.stopRunning();
             System.out.println("finished application");
             if(!bpu.checkVersion()) {
-            	System.out.println("Wrong firmware version detected: " + bpu.getState(Message.API_VERSION));
+            	System.out.println("Wrong firmware version detected: " + bpu.getState(APIMessage.API_VERSION));
             }
-            for(Message M : Message.values()) {
+            for(APIMessage M : APIMessage.values()) {
             	System.out.println(">>>"+M + ": " + bpu.getState(M) + "<<<");
             }
     	} catch (Exception e) {

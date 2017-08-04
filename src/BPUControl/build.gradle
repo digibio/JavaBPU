@@ -5,6 +5,9 @@ version = '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
+	flatDir {
+       dirs 'libs/SerialPundit'
+    }
 }
 
 jar {
@@ -15,8 +18,8 @@ jar {
 
 dependencies {
     compile  'log4j:log4j:1.2.16'
-    compile 'org.bidib.com.serialpundit:sp-core:1.0.4'
-    //compile 'org.bidib.com.serialpundit:sp-serial:1.0.4'
+	compile name: 'sp-core'
+	compile name: 'sp-tty'
     compile ('io.socket:socket.io-client:1.0.0') {
          // excluding org.json which is provided by Android
         exclude group: 'org.json', module: 'json'

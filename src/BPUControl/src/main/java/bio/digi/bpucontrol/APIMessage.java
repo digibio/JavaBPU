@@ -8,8 +8,8 @@ enum APIMessage {
 	HV_REPORTED("LOG "), // measured output voltage: only available when log is enabled
 	VIN_REPORTED("LOG "), // measured input voltage: only available when log is enabled
 	VOLTAGECONTROLSTATE("pot state: "); // state of the pot that sets the voltage
-	private String message;
-	private APIMessage(String message) {
+	String message;
+	APIMessage(String message) {
 		this.message = message;
 	}
 	public String toString() {
