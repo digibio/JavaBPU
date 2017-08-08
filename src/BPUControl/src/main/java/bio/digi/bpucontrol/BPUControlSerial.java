@@ -10,6 +10,8 @@ import com.serialpundit.serial.SerialComManager.DATABITS;
 import com.serialpundit.serial.SerialComManager.FLOWCONTROL;
 import com.serialpundit.serial.SerialComManager.PARITY;
 import com.serialpundit.serial.SerialComManager.STOPBITS;
+import com.serialpundit.usb.SerialComUSB;
+
 /**
  * @author Frido Emans
  * 
@@ -35,7 +37,7 @@ public final class BPUControlSerial implements Runnable, BPUControl {
 	private byte[] dataRead;
     private String dataStr;
 
-    private final SerialComManager scm;
+    private SerialComManager scm = null;
     public String output = "";
     private long comPortHandle;
     private String status;
@@ -44,16 +46,16 @@ public final class BPUControlSerial implements Runnable, BPUControl {
     PARITY parity = PARITY.P_NONE;
     BAUDRATE baudrate = BAUDRATE.B9600;
     
-    private Map<APIMessage, String> BPUState = new EnumMap<APIMessage, String>(APIMessage.class);
+    private Map<BPUMessage, String> BPUState = new EnumMap<BPUMessage, String>(BPUMessage.class);
     
     private void interpretOutput(String output) {
-    	for(APIMessage M : APIMessage.values()) {
+    	for(BPUMessage M : BPUMessage.values()) {
     		if(output.startsWith(M.message)) {
     			String value;
-    			if(M == APIMessage.HV_REPORTED) {
+    			if(M == BPUMessage.HV_REPORTED) {
     				value = output.substring(output.indexOf(";")).trim();
     			}
-    			else if(M == APIMessage.VIN_REPORTED) {
+    			else if(M == BPUMessage.VIN_REPORTED) {
     				value = output.substring(M.message.length(), output.lastIndexOf(" "));
     			} 
     			else value = output.substring(M.message.length()).trim();
@@ -63,14 +65,14 @@ public final class BPUControlSerial implements Runnable, BPUControl {
     	}
     }
     
-    public BPUControlSerial() throws IOException {
-    	this.scm = new SerialComManager();
+    public BPUControlSerial() {
+    	try {
+			this.scm = new SerialComManager();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
     }
-    /* (non-Javadoc)
-	 * @see BPUControl.BPUControl#stopRunning()
-	 */
-    @Override
-	public void stopRunning() {
+    public void stopRunning() {
     	System.out.println("stopping thread");
     	this.stop = true;
     }
@@ -87,103 +89,84 @@ public final class BPUControlSerial implements Runnable, BPUControl {
     }
     /*
      * enable this to print output of BPU to the console (default false)
-     * 
-     * previously: setOutputLogging
      */
-    /* (non-Javadoc)
-	 * @see BPUControl.BPUControl#toggleOutputLogging(boolean)
-	 */
     @Override
-	public void toggleOutputLogging(boolean enable) {
+	public void switchOutputLogging(boolean enable) {
     	this.logOutput = enable;
     }
+    /*
+     * deprecated; use switchOutputLogging; 
+     */
+    public void toggleOutputLogging(boolean enable) { switchOutputLogging(enable); }
     /* 
      * enable this to print commands sent to the BPU to the console (default false)
-     * 
-     * previously: setCommandLogging
      */
-    /* (non-Javadoc)
-	 * @see BPUControl.BPUControl#toggleCommandLogging(boolean)
-	 */
-    @Override
-	public void toggleCommandLogging(boolean enable) {
+    public void switchCommandLogging(boolean enable) {
     	this.logCommands = enable;
     }
-    /* 
-     * enable this when you have a top layer on the biochip (default true)
-     * 
-     * previously: setTopElectrode
+    /*
+     * deprecated; use switchCommandLogging
      */
-    /* (non-Javadoc)
-	 * @see BPUControl.BPUControl#toggleTopElectrode(boolean)
-	 */
-    @Override
-	public void toggleTopElectrode(boolean enabled) throws SerialComException {
+    public void toggleCommandLogging(boolean enable) { switchCommandLogging(enable); }
+    /* 
+     * switchTopElectrode: select whether the biochip has a top electrode
+     * default: true
+     */
+	public void switchTopElectrode(boolean enabled) throws SerialComException {
     	this.topElectrode = enabled;
     	if(ChannelState.length > 0) {
     		this.updateChannels(ChannelState);
     	}
     }
-    
+    /* 
+     * deprecated; use switchTopElectrode
+     */
+    public void toggleTopElectrode(boolean enabled) throws SerialComException {
+        switchTopElectrode(enabled);
+    }
     /*
      * send signal to set the voltage; use number between 0 and 127
-     * 
-     * previously: SetDigiPotState
      */
-    /* (non-Javadoc)
-	 * @see BPUControl.BPUControl#setVoltageControl(int)
-	 */
-    @Override
 	public void setTargetVoltage(int voltage) throws SerialComException {
     	sendLine("hv vol " + voltage);
 	}
     /*
      * switch HV on and off in the BPU
-     * 
-     * previously: EnableHighVoltage
      */
-    /* (non-Javadoc)
-	 * @see BPUControl.BPUControl#toggleHighVoltage(java.lang.Boolean)
-	 */
-    @Override
-	public void toggleHighVoltage(Boolean enable) throws SerialComException {
+	public void switchHighVoltage(Boolean enable) throws SerialComException {
 		sendLine("hv gen " + (enable ? "1" : "0"));
 	}
-	
+    /* 
+     * deprecated
+     */
+    public void toggleHighVoltage(Boolean enable) throws SerialComException {
+		switchHighVoltage(enable);
+	}
 	
     /*
-     * switch status reports of BPU of the meaured voltage
-     * 
-     * previously: EnableLog
+     * switch status reports of BPU of the measured voltage
      */
-    /* (non-Javadoc)
-	 * @see BPUControl.BPUControl#toggleVoltageLog(java.lang.Boolean)
-	 */
-    @Override
-	public void toggleVoltageLog(Boolean enable) throws SerialComException {
+    public void switchVoltageLog(Boolean enable) throws SerialComException {
 		sendLine("log " + (enable ? "1" : "0"));
 	}
     /*
-     * switch AC on and off
-     * 
-     * previously called: SetAC
+     * deprecated; use switchVoltageLog
      */
-	/* (non-Javadoc)
-	 * @see BPUControl.BPUControl#toggleAC(java.lang.Boolean)
-	 */
-	@Override
-	public void toggleAC(Boolean enable) throws SerialComException {
+    public void toggleVoltageLog(Boolean enable) throws SerialComException {
+		switchVoltageLog(enable);
+	}/*
+     * switch AC on and off
+     */
+	public void switchAC(Boolean enable) throws SerialComException {
 		sendLine("polac " + (enable ? "1" : "0"));
 	}
+	public void toggleAC(Boolean enable) throws SerialComException {
+		switchAC(enable);
+	}
+	
 	/*
 	 * select which channels of the device get switched on and off using byte array
-	 * 
-	 * previously called: UpdateHV
 	 */
-	/* (non-Javadoc)
-	 * @see BPUControl.BPUControl#updateChannels(byte[])
-	 */
-	@Override
 	public void updateChannels(byte[] state) throws SerialComException
 	{
 //		byte[] values = Arrays.copyOf(state, 16);
@@ -192,23 +175,13 @@ public final class BPUControlSerial implements Runnable, BPUControl {
 	/*
 	 * select which channels of the device get switched on and off using a 	hexadecimal number
 	 */
-	/* (non-Javadoc)
-	 * @see BPUControl.BPUControl#updateChannels(java.lang.String)
-	 */
-	@Override
 	public void updateChannels(String hex) throws SerialComException {
 		String cmd = "hvset " + hex;
 		sendLine(cmd);
 	}
 	/*
 	 * write a line through the serial to the BPU
-	 * 
-	 * previously called: WriteLine
 	 */
-	/* (non-Javadoc)
-	 * @see BPUControl.BPUControl#sendLine(java.lang.String)
-	 */
-	@Override
 	public void sendLine(String input) throws SerialComException {
 		if(logCommands) {
     		System.out.println("Sending serial command: " + input);
@@ -220,27 +193,16 @@ public final class BPUControlSerial implements Runnable, BPUControl {
      * 
      * if no such record exists, return null
      */
-    /* (non-Javadoc)
-	 * @see BPUControl.BPUControl#checkVersion()
-	 */
-    @Override
-	public Boolean checkVersion() {
-    	if(getState(APIMessage.API_VERSION) == null) return null;
-    	return getState(APIMessage.API_VERSION).equals(this.API_VERSION);
+    public Boolean checkVersion() {
+    	if(getState(BPUMessage.API_VERSION) == null) return null;
+    	return getState(BPUMessage.API_VERSION).equals(this.API_VERSION);
     }
     /*
      * retrieve recorded state from BPU, indexed by the enum Message;
-     * 
-     * if no such state message has been recorded, return null
      */
-    /* (non-Javadoc)
-	 * @see BPUControl.BPUControl#getState(BPUControl.BPUSerial.Message)
-	 */
-    @Override
-	public String getState(APIMessage M) {
+    public String getState(BPUMessage M) {
     	return this.BPUState.get(M);
     }
-    /* previously called LastOutput */
     public String lastOutput() {
     	String[] outputList = output.split(LINEBREAK);
     	try {
@@ -250,10 +212,6 @@ public final class BPUControlSerial implements Runnable, BPUControl {
     	}
     }
     
-    /* (non-Javadoc)
-	 * @see BPUControl.BPUControl#run()
-	 */
-    @Override
     public void run() {
     	String updateStatus = "";
     	int outputCounter = 0;
@@ -294,8 +252,6 @@ public final class BPUControlSerial implements Runnable, BPUControl {
 
     /* 
      * list ports with usb devices connected
-     * 
-     * previously called: ListAvailablePorts
      */
     public static String[] listAvailablePorts() throws IOException {
         SerialComManager scm = new SerialComManager();
@@ -321,8 +277,8 @@ public final class BPUControlSerial implements Runnable, BPUControl {
         	}
         	bpu.toggleAC(true);
         	
-        	bpu.toggleOutputLogging(true);
-			bpu.toggleHighVoltage(true);
+        	bpu.switchOutputLogging(true);
+			bpu.switchHighVoltage(true);
 			bpu.setTargetVoltage(111);
         	bpu.updateChannels(new byte[] {121,(byte)232});
         	bpu.updateChannels(new byte[] {1,3,7,15});
@@ -338,9 +294,9 @@ public final class BPUControlSerial implements Runnable, BPUControl {
         	bpu.stopRunning();
             System.out.println("finished application");
             if(!bpu.checkVersion()) {
-            	System.out.println("Wrong firmware version detected: " + bpu.getState(APIMessage.API_VERSION));
+            	System.out.println("Wrong firmware version detected: " + bpu.getState(BPUMessage.API_VERSION));
             }
-            for(APIMessage M : APIMessage.values()) {
+            for(BPUMessage M : BPUMessage.values()) {
             	System.out.println(">>>"+M + ": " + bpu.getState(M) + "<<<");
             }
     	} catch (Exception e) {

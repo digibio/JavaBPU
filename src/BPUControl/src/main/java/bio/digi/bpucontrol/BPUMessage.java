@@ -1,5 +1,5 @@
 package bio.digi.bpucontrol;
-enum APIMessage {
+enum BPUMessage {
 	API_VERSION("API version: "), 
 	BPU_VERSION("BPU version: "),
 	AC_STATE("AC state: "), // AC has been switched on
@@ -9,7 +9,7 @@ enum APIMessage {
 	VIN_REPORTED("LOG "), // measured input voltage: only available when log is enabled
 	VOLTAGECONTROLSTATE("pot state: "); // state of the pot that sets the voltage
 	String message;
-	APIMessage(String message) {
+	BPUMessage(String message) {
 		this.message = message;
 	}
 	public String toString() {

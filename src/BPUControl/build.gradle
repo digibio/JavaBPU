@@ -18,9 +18,18 @@ jar {
 
 dependencies {
     compile  'log4j:log4j:1.2.16'
+    compile 'org.apache.commons:commons-lang3:3.6'
+    
+    // https://mvnrepository.com/artifact/org.json/json
+	compile group: 'org.json', name: 'json', version: '20170516'
+    
+    // serialpundit
 	compile name: 'sp-core'
 	compile name: 'sp-tty'
-    compile ('io.socket:socket.io-client:1.0.0') {
+	compile name: 'sp-usb'
+	
+	// socket.io
+	compile ('io.socket:socket.io-client:1.0.0') {
          // excluding org.json which is provided by Android
         exclude group: 'org.json', module: 'json'
     }
