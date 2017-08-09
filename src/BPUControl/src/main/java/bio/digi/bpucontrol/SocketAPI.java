@@ -2,6 +2,8 @@ package bio.digi.bpucontrol;
 
 import java.net.URISyntaxException;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
 
@@ -25,6 +27,13 @@ public class SocketAPI {
 	private String deviceName;
 	private Socket socket;
 	
+	private final Map<APIRequests, Listener> bindings = new HashMap<APIRequests, Listener>(); 
+	private void setBindings() {
+		bindings.put(APIRequests.SENDLINE, sendLine());
+		bindings.put(APIRequests.SETCHANNELS, setChannels());
+		bindings.put(APIRequests.SWITCHAC, switchAC());
+	}
+	
 	public SocketAPI(
 			String url, 
 			String userEmail, 
@@ -39,7 +48,7 @@ public class SocketAPI {
 		this.deviceName = deviceName;
 		this.userEmail = userEmail;
         this.deviceName = deviceName;
-
+        setBindings();
         Options options = new IO.Options();
         // no options
         socket = IO.socket(this.url + "bpu", options);
@@ -75,8 +84,7 @@ public class SocketAPI {
 	}
 	private Listener socketDisconnect(int status) {
 		return (args) -> {
-			System.out.println("Socket disconnected; terminating app");
-			System.exit(status);
+			System.out.println("Socket disconnected; going to reconnect");
 		};
 	}
 	private Listener socketError(String status) {
@@ -88,7 +96,10 @@ public class SocketAPI {
 		return (args) -> {
 			JSONObject obj = (JSONObject)args[0];
 			try {
-				bpu.sendLine(obj.getString("line"));
+				System.out.print("SocketAPI received sendline");
+				String line = obj.getString("line");
+				System.out.println(": " + line);
+				bpu.sendLine(line);
 			} catch (SerialComException e) {
 				emit(APIRequests.DEVICEERROR, e.getMessage());
 			} catch (JSONException e) {
@@ -100,7 +111,9 @@ public class SocketAPI {
 		return (args) -> {
 			JSONObject obj = (JSONObject)args[0];
 			try {
-				bpu.updateChannels(obj.getString("hexstate"));
+				String hexstate = obj.getString("hexstate");
+				System.out.println("SocketAPI received channel update:" + hexstate);
+				bpu.updateChannels(hexstate);
 			} catch (SerialComException e) {
 				emit(APIRequests.DEVICEERROR, e.getMessage());
 			} catch (JSONException e) {
@@ -112,7 +125,9 @@ public class SocketAPI {
 		return (args) -> {
 			JSONObject obj = (JSONObject)args[0];
 			try {
-				bpu.switchAC(obj.getBoolean("state"));
+				Boolean state = obj.getBoolean("state");
+				System.out.println("SocketAPI received AC state:" + state);
+				bpu.switchAC(state);
 			} catch (SerialComException e) {
 				emit(APIRequests.DEVICEERROR, e.getMessage());
 			} catch (JSONException e) {
@@ -120,17 +135,13 @@ public class SocketAPI {
 			}
 		};
 	}
-	private void bind(APIRequests request, Listener call) {
-		socket.on(request.key, call);
-	}
 	private void emit(APIRequests message, Object body) {
 		socket.emit(message.toString(), body);
 	}
 	private void bindApiCalls() {
 		System.out.println("Binding api calls");
-		bind(APIRequests.SENDLINE, sendLine());
-		bind(APIRequests.SETCHANNELS, setChannels());
-		bind(APIRequests.SWITCHAC, switchAC());
+		for(Map.Entry<APIRequests, Listener> binding : bindings.entrySet()) {
+			socket.on(binding.getKey().key, binding.getValue());
+		}
 	}
-	
 }

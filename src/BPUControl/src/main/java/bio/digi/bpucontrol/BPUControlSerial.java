@@ -186,7 +186,11 @@ public final class BPUControlSerial implements Runnable, BPUControl {
 		if(logCommands) {
     		System.out.println("Sending serial command: " + input);
     	}
-		sendLine(input);
+		if(input.isEmpty()) {
+			System.out.println("BPUControlSerial - attempt to send empty string to device");
+			return;
+		}
+		scm.writeString(comPortHandle, input, 0);
 	}
     /*
      * check recorded version of BPU output against local constant VERSION
