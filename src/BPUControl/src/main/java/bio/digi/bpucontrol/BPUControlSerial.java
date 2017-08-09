@@ -1,6 +1,8 @@
 package bio.digi.bpucontrol;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 
 import com.serialpundit.core.SerialComException;
@@ -11,6 +13,7 @@ import com.serialpundit.serial.SerialComManager.FLOWCONTROL;
 import com.serialpundit.serial.SerialComManager.PARITY;
 import com.serialpundit.serial.SerialComManager.STOPBITS;
 import com.serialpundit.usb.SerialComUSB;
+import com.serialpundit.usb.SerialComUSBdevice;
 
 /**
  * @author Frido Emans
@@ -258,8 +261,27 @@ public final class BPUControlSerial implements Runnable, BPUControl {
      * list ports with usb devices connected
      */
     public static String[] listAvailablePorts() throws IOException {
-        SerialComManager scm = new SerialComManager();
-        return scm.listAvailableComPorts();
+    	List<String> availablePortList = new ArrayList<String>();
+    	final SerialComUSB scusb = new SerialComUSB(null,null);
+    	SerialComUSBdevice[] usbList = scusb.listUSBdevicesWithInfo(0);
+    	for(SerialComUSBdevice dev : usbList) {
+//    		System.out.println("usb device: " + dev.getProductString());
+//    		System.out.println("usb sn: " + dev.getSerialNumber());
+//    		System.out.println("usb vid: " + dev.getVendorID());
+    		String[] devicePorts = scusb.findComPortFromUSBAttributes(
+    				dev.getVendorID(),
+    				dev.getProductID(), 
+    				// it works better if serial number of the device is null
+    				// TODO: look into the hardware we are using, serial numbers, vid, pid, etc
+    				// make filter based on those numbers
+    				null);
+//    				dev.getSerialNumber());
+    		for(int i = 0; i < devicePorts.length; i++) {
+    			availablePortList.add(devicePorts[i]);
+    		}
+    	}
+    	String[] availablePorts = new String[availablePortList.size()];
+    	return availablePortList.toArray(availablePorts);
 	}
     /*
      * for testing purposes only
