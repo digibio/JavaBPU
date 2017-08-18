@@ -122,7 +122,7 @@ public class WebConnector{
 			messageBody
 				.put("variable", variable)
 				.put("line", state);
-			socketEmit(APIRequests.BPUOUTPUT, messageBody);
+			socketEmit(APIRequests.STATECHANGE, messageBody);
 		}
 
 		@Override
