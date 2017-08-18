@@ -4,10 +4,16 @@ Collection of libraries and tools to use with the bpu device
 
 ## WebConnector
 
-Software to open a connection to the web app. To build: 
+Software to open a connection to the web app. 
 
-- install gradle
-- run `gradle build`
+### build
+
+- install maven
+- run `maven clean install`
+
+this should do the trick.
+
+### run
 
 to run, there are a number of parameters. 
 
@@ -16,7 +22,6 @@ to run, there are a number of parameters.
 - `--email`: email address of the user that has been registered with the web app
 - `--password`: password of the user registered with the web app  
 - `--device`: name of the device. This can be arbitrarily chosen.
-
  
 
 ## BPUSerial library:

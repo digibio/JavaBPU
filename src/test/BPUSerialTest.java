@@ -15,7 +15,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import BPUControl.BPUSerial;
+import bio.digi.bpucontrol.BPUControlSerial;
+
+
 /**
  * @author xor
  *
@@ -57,7 +59,7 @@ public class BPUSerialTest {
 	public void testStaticListComports() {
 		String[] comports = null;
 		try {
-			comports = BPUSerial.listAvailablePorts();
+			comports = BPUControlSerial.listAvailablePorts();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

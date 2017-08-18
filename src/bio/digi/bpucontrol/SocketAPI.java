@@ -93,11 +93,17 @@ public class SocketAPI {
 					}
 				});
 				JSONObject authCredentials = new JSONObject();
-				authCredentials
-					.put("useremail", userEmail)
-					.put("userpassword", userPassword)
-					.put("devicename", deviceName);
-				socket.emit("authenticate", authCredentials);
+				
+				try {
+					authCredentials
+						.put("useremail", userEmail)
+						.put("userpassword", userPassword)
+						.put("devicename", deviceName);
+					socket.emit("authenticate", authCredentials);
+				} catch (JSONException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 		};
 	}

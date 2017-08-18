@@ -3,6 +3,8 @@ package bio.digi.bpucontrol;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Arrays;
+
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.serialpundit.core.SerialComException;
@@ -121,25 +123,40 @@ public class WebConnector{
 		@Override
 		public void stateChange(BPUMessage variable, String state) {
 			JSONObject messageBody = new JSONObject();
-			messageBody
-				.put("variable", variable)
-				.put("line", state);
-			socketEmit(APIRequests.STATECHANGE, messageBody);
+			try {
+				messageBody
+					.put("variable", variable)
+					.put("line", state);
+				socketEmit(APIRequests.STATECHANGE, messageBody);
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 
 		@Override
 		public void outputReceived(String output) {
 			JSONObject messageBody = new JSONObject();
-			messageBody
-				.put("line", output);
-			socketEmit(APIRequests.BPUOUTPUT, messageBody);
+			try {
+				messageBody
+					.put("line", output);
+				socketEmit(APIRequests.BPUOUTPUT, messageBody);
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		@Override
 		public void exceptionHandler(APIRequests exception, String message) {
 			JSONObject messageBody = new JSONObject();
-			messageBody
-				.put("message", message);
-			socketEmit(exception, messageBody);
+			try {
+				messageBody
+					.put("message", message);
+				socketEmit(exception, messageBody);
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 }
