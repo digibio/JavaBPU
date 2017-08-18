@@ -61,6 +61,11 @@ public class SocketAPI {
         socket.connect();
 	}
 
+	void emit(APIRequests message, Object body) {
+		System.out.printf("emitting message %s with body: %s\n", message.toString(), body.toString());
+		socket.emit(message.toString(), body);
+	}
+	
 	private Listener socketConnect() {
 		return new Emitter.Listener() {
 			@Override
@@ -135,13 +140,11 @@ public class SocketAPI {
 			}
 		};
 	}
-	private void emit(APIRequests message, Object body) {
-		socket.emit(message.toString(), body);
-	}
 	private void bindApiCalls() {
 		System.out.println("Binding api calls");
 		for(Map.Entry<APIRequests, Listener> binding : bindings.entrySet()) {
 			socket.on(binding.getKey().key, binding.getValue());
 		}
 	}
+
 }

@@ -4,16 +4,20 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 
+import org.json.JSONObject;
+
 import com.serialpundit.core.SerialComException;
 
-public class WebConnector {
+public class WebConnector{
 	String host = "";
 	String email = "";
 	String password = "";
 	String device = "";
 	String serialPort = null;
 	SocketAPI socket = null;
-	BPUControl bpu = new BPUControlSerial();
+	BPUCallbacks callbacks = new BPUSocketCallbacks();
+	BPUControl bpu = BPUControlSerial.kickoff(callbacks);
+//	BPUControl bpu = new BPUControlVirtualDevice(callbacks);
 
 	private void connect() {
 		if (!host.endsWith("/")) {
@@ -75,6 +79,7 @@ public class WebConnector {
 					wc.serialPort = args[i + 1];
 				}
 			}
+//		/*	
 			// the following part is to find, select and connect to an available usb port.
 			if (wc.serialPort != null) {
 				if (!Arrays.asList(serialPorts).contains(wc.serialPort)) {
@@ -96,10 +101,44 @@ public class WebConnector {
 					System.err.println("Error opening com port: " + e.getMessage());
 				}
 			}
-
+//			*/
+			
 			if (wc.host.length() > 0) {
 				wc.connect();
 			}
 		}
+	}
+	private class BPUSocketCallbacks implements BPUCallbacks {
+		private void socketEmit(APIRequests message, JSONObject body) {
+			if(socket == null) {
+				System.out.println("no socket available");
+				return;
+			}
+			socket.emit(message, body);
+		}
+		@Override
+		public void stateChange(BPUMessage variable, String state) {
+			JSONObject messageBody = new JSONObject();
+			messageBody
+				.put("variable", variable)
+				.put("line", state);
+			socketEmit(APIRequests.BPUOUTPUT, messageBody);
+		}
+
+		@Override
+		public void outputReceived(String output) {
+			JSONObject messageBody = new JSONObject();
+			messageBody
+				.put("line", output);
+			socketEmit(APIRequests.BPUOUTPUT, messageBody);
+		}
+		@Override
+		public void exceptionHandler(APIRequests exception, String message) {
+			JSONObject messageBody = new JSONObject();
+			messageBody
+				.put("message", message);
+			socketEmit(exception, messageBody);
+		}
+			
 	}
 }

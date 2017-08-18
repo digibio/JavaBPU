@@ -26,7 +26,7 @@ import com.serialpundit.usb.SerialComUSBdevice;
 
 public final class BPUControlSerial implements Runnable, BPUControl {
 	
-	private final String API_VERSION = "2.0.1";
+	private final String API_VERSION = "2.1.0";
 	private final String LINEBREAK = "\n";
 	
 	private boolean logCommands = false;
@@ -34,6 +34,7 @@ public final class BPUControlSerial implements Runnable, BPUControl {
     private boolean logStore = false; // log whenever a logged value is stored as a variable
     
 	private volatile boolean stop = false;
+	// TODO: something with the top electrode
     private volatile boolean topElectrode = true;
     private volatile byte[] ChannelState;
 	
@@ -43,31 +44,22 @@ public final class BPUControlSerial implements Runnable, BPUControl {
     private SerialComManager scm = null;
     public String output = "";
     private long comPortHandle;
-    private String status;
     DATABITS databits = DATABITS.DB_8;
 	STOPBITS stopbits = STOPBITS.SB_1;
     PARITY parity = PARITY.P_NONE;
     BAUDRATE baudrate = BAUDRATE.B9600;
     
     private Map<BPUMessage, String> BPUState = new EnumMap<BPUMessage, String>(BPUMessage.class);
+    private BPUCallbacks callbacks = null;
     
-    private void interpretOutput(String output) {
-    	for(BPUMessage M : BPUMessage.values()) {
-    		if(output.startsWith(M.message)) {
-    			String value;
-    			if(M == BPUMessage.HV_REPORTED) {
-    				value = output.substring(output.indexOf(";")).trim();
-    			}
-    			else if(M == BPUMessage.VIN_REPORTED) {
-    				value = output.substring(M.message.length(), output.lastIndexOf(" "));
-    			} 
-    			else value = output.substring(M.message.length()).trim();
-    			BPUState.put(M, value);
-    			if(logStore) System.out.println("Storing variable: " + M.name() + ": " + value);
-    		}
-    	}
+    public BPUControlSerial(BPUCallbacks callbacks) {
+    	this.callbacks = callbacks;
+    	try {
+			this.scm = new SerialComManager();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
     }
-    
     public BPUControlSerial() {
     	try {
 			this.scm = new SerialComManager();
@@ -75,6 +67,31 @@ public final class BPUControlSerial implements Runnable, BPUControl {
 			e.printStackTrace();
 		}
     }
+    
+    // TODO: cleanup of old output
+    private void interpretOutput(String output) {
+    	if(callbacks != null) {
+    		callbacks.outputReceived(output);
+    	}
+    	for(BPUMessage M : BPUMessage.values()) {
+    		if(output.startsWith(M.message)) {
+    			String value;
+    			if(M == BPUMessage.HV_REPORTED) {
+    				value = output.substring(output.indexOf(" "), output.lastIndexOf(" ")).trim();
+    			}
+    			else if(M == BPUMessage.VIN_REPORTED) {
+    				value = output.substring(M.message.length(), output.lastIndexOf(" "));
+    			} 
+    			else value = output.substring(M.message.length()).trim();
+    			BPUState.put(M, value);
+				if(callbacks != null) {
+					callbacks.stateChange(M, value);
+				}
+    			if(logStore) System.out.println("Storing variable: " + M.name() + ": " + value);
+    		}
+    	}
+    }
+    
     public void stopRunning() {
     	System.out.println("stopping thread");
     	this.stop = true;
@@ -204,6 +221,10 @@ public final class BPUControlSerial implements Runnable, BPUControl {
     	if(getState(BPUMessage.API_VERSION) == null) return null;
     	return getState(BPUMessage.API_VERSION).equals(this.API_VERSION);
     }
+    public Boolean checkVersion(String expectedVersion) {
+    	if(getState(BPUMessage.API_VERSION) == null) return null;
+    	return getState(BPUMessage.API_VERSION).equals(expectedVersion);
+    }
     /*
      * retrieve recorded state from BPU, indexed by the enum Message;
      */
@@ -220,7 +241,6 @@ public final class BPUControlSerial implements Runnable, BPUControl {
     }
     
     public void run() {
-    	String updateStatus = "";
     	int outputCounter = 0;
         while(!stop) {
             try {
@@ -231,19 +251,20 @@ public final class BPUControlSerial implements Runnable, BPUControl {
                 }
             }
             try {
-                dataRead = scm.readBytes(comPortHandle, 10);
-                if(dataRead != null) {
-                    dataStr = new String(dataRead);
-                    output += dataStr;
-                }
+            	if(comPortHandle > 0) {
+					dataRead = scm.readBytes(comPortHandle, 10);
+					if(dataRead != null) {
+						dataStr = new String(dataRead);
+						output += dataStr;
+					}
+            	}
             } catch (SerialComException e) {
-                updateStatus = e.getExceptionMsg();
+            	System.out.println("exception caught for serial bus");
                 this.stopRunning();
         		e.printStackTrace();
             } 
-            if(!updateStatus.equals(status)) {
-            	status = updateStatus;
-                System.out.println(status);
+            catch (Throwable e) {
+            	System.out.println("another exception caught: " + e.getMessage());
             }
             String[] outputLines = output.split(LINEBREAK);
         	while(outputCounter < outputLines.length - 1) {
@@ -283,6 +304,25 @@ public final class BPUControlSerial implements Runnable, BPUControl {
     	String[] availablePorts = new String[availablePortList.size()];
     	return availablePortList.toArray(availablePorts);
 	}
+    
+    /*
+     * Generate a running thread
+     */
+    public static BPUControlSerial kickoff() {
+    	return kickoff(null);
+    }
+    public static BPUControlSerial kickoff(BPUCallbacks callbacks) {
+		BPUControlSerial bpu = new BPUControlSerial(callbacks);
+		Thread bpuThread = new Thread(bpu);
+		bpuThread.start();
+		try {
+			Thread.sleep(1000);
+		} catch(InterruptedException ex) {
+			Thread.currentThread().interrupt();
+		}
+		return bpu;
+    }
+	
     /*
      * for testing purposes only
      */

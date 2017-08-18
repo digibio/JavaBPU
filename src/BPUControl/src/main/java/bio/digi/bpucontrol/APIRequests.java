@@ -8,6 +8,9 @@ public enum APIRequests {
 	SETVOLTAGE("user.request.bpu.setVoltageControl"),
 	SETCHANNELS("user.request.bpu.setChannelState"),
 	
+	// messages to send:
+    BPUOUTPUT("device.message.bpu.output"),
+    STATECHANGE("device.message.bpu.state"),
 	// error messages to send:
 	DEVICEERROR("device.error"),
 	JSONBODYERROR("json.error");

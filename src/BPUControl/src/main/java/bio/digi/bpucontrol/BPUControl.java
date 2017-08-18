@@ -2,7 +2,6 @@ package bio.digi.bpucontrol;
 import com.serialpundit.core.SerialComException;
 
 public interface BPUControl {
-
 	void stopRunning();
 
 	/*
@@ -90,9 +89,21 @@ public interface BPUControl {
 	 * if no such state message has been recorded, return null
 	 */
 	String getState(BPUMessage M);
-
+	
 	void run();
+}
 
-
-
+interface BPUCallbacks{
+	/*
+	 * stateChange: do something when some state of the device changes
+	 */
+	void stateChange(BPUMessage message, String state);
+	/*
+	 * outputReceived: do something with output from the device
+	 */
+	void outputReceived(String output);
+	/*
+	 * exceptionHandler: if some sort of exception needs to be communicated
+	 */
+	void exceptionHandler(APIRequests exception, String message);
 }
