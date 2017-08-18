@@ -2,7 +2,9 @@
  * 
  */
 package test;
-
+/*
+ * This has been completely unmaintained so far
+ */
 import static org.junit.Assert.*;
 
 import java.io.IOException;
