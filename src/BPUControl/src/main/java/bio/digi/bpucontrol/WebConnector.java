@@ -3,7 +3,6 @@ package bio.digi.bpucontrol;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Arrays;
-
 import org.json.JSONObject;
 
 import com.serialpundit.core.SerialComException;
@@ -14,9 +13,10 @@ public class WebConnector{
 	String password = "";
 	String device = "";
 	String serialPort = null;
-	SocketAPI socket = null;
+	SocketAPI socket = new SocketAPI();
 	BPUCallbacks callbacks = new BPUSocketCallbacks();
-	BPUControl bpu = BPUControlSerial.kickoff(callbacks);
+	BPUControl bpu;
+//	BPUControl bpu = BPUControlSerial.kickoff(callbacks);
 //	BPUControl bpu = new BPUControlVirtualDevice(callbacks);
 
 	private void connect() {
@@ -27,7 +27,7 @@ public class WebConnector{
 			host = "http://" + host;
 		}
 		try {
-			socket = new SocketAPI(host, email, password, device, bpu);
+			socket.connect(host, email, password, device, bpu);
 		} catch (URISyntaxException e) {
 			e.printStackTrace();
 		}
@@ -81,24 +81,30 @@ public class WebConnector{
 			}
 //		/*	
 			// the following part is to find, select and connect to an available usb port.
-			if (wc.serialPort != null) {
-				if (!Arrays.asList(serialPorts).contains(wc.serialPort)) {
-					System.out.println("No device at requested port " + wc.serialPort + "available");
-					wc.serialPort = null;
-				}
-			} else {
-				if (serialPorts != null && serialPorts.length == 0) {
-					System.out.println("No connected serial devices available");
-				} else {
-					System.out.println("choosing port " + serialPorts[0] + " as device port");
-					wc.serialPort = serialPorts[0];
-				}
+			if (wc.serialPort.equals("virtual")) {
+				wc.bpu = BPUControlVirtualDevice.kickoff(wc.callbacks);
 			}
-			if (wc.serialPort != null) {
-				try {
-					((BPUControlSerial) wc.bpu).openComPort(wc.serialPort);
-				} catch (SerialComException e) {
-					System.err.println("Error opening com port: " + e.getMessage());
+			else {
+				wc.bpu = BPUControlSerial.kickoff(wc.callbacks);
+				if (wc.serialPort != null) {
+					if (!Arrays.asList(serialPorts).contains(wc.serialPort)) {
+						System.out.println("No device at requested port " + wc.serialPort + "available");
+						wc.serialPort = null;
+					}
+				} else {
+					if (serialPorts != null && serialPorts.length == 0) {
+						System.out.println("No connected serial devices available");
+					} else {
+						System.out.println("choosing port " + serialPorts[0] + " as device port");
+						wc.serialPort = serialPorts[0];
+					}
+				}
+				if (wc.serialPort != null) {
+					try {
+						((BPUControlSerial) wc.bpu).openComPort(wc.serialPort);
+					} catch (SerialComException e) {
+						System.err.println("Error opening com port: " + e.getMessage());
+					}
 				}
 			}
 //			*/
@@ -110,11 +116,7 @@ public class WebConnector{
 	}
 	private class BPUSocketCallbacks implements BPUCallbacks {
 		private void socketEmit(APIRequests message, JSONObject body) {
-			if(socket == null) {
-				System.out.println("no socket available");
-				return;
-			}
-			socket.emit(message, body);
+			socket.queue(socket.new Message(message, body));
 		}
 		@Override
 		public void stateChange(BPUMessage variable, String state) {
@@ -139,6 +141,5 @@ public class WebConnector{
 				.put("message", message);
 			socketEmit(exception, messageBody);
 		}
-			
 	}
 }

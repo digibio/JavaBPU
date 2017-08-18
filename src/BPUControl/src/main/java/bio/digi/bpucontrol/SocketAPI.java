@@ -3,7 +3,9 @@ package bio.digi.bpucontrol;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
 
@@ -33,8 +35,14 @@ public class SocketAPI {
 		bindings.put(APIRequests.SETCHANNELS, setChannels());
 		bindings.put(APIRequests.SWITCHAC, switchAC());
 	}
+	private Queue<Message> messageQueue = new LinkedList<Message>();
+	private SocketMQ mq = new SocketMQ();
+	Thread mqThread = new Thread(mq);
 	
-	public SocketAPI(
+	public SocketAPI() {
+		mqThread.start();
+	}
+	public void connect(
 			String url, 
 			String userEmail, 
 			String userPassword, 
@@ -61,9 +69,15 @@ public class SocketAPI {
         socket.connect();
 	}
 
-	void emit(APIRequests message, Object body) {
+	public void queue(Message message) {
+		messageQueue.add(message);
+	}
+	private void emit(APIRequests message, Object body) {
 		System.out.printf("emitting message %s with body: %s\n", message.toString(), body.toString());
 		socket.emit(message.toString(), body);
+	}
+	private void emit(Message message) {
+		emit(message.request, message.payload);
 	}
 	
 	private Listener socketConnect() {
@@ -146,5 +160,31 @@ public class SocketAPI {
 			socket.on(binding.getKey().key, binding.getValue());
 		}
 	}
-
+	public class SocketMQ implements Runnable {
+		// TODO: build if needed some stopping condition and or clearing methods.
+		private boolean stop = false;
+		@Override
+		public void run() {
+			while(!stop) {
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				Message message = messageQueue.poll();
+				if(message != null) {
+					emit(message);
+				}
+			}
+		}
+	}
+	public class Message {
+		public APIRequests request;
+		public JSONObject payload;
+		public Message(APIRequests r, JSONObject p){
+			this.request = r;
+			this.payload = p;
+		}
+	}
 }

@@ -194,6 +194,15 @@ public class BPUControlVirtualDevice implements Runnable, BPUControl {
 		return null;
 	}
 
+    public static BPUControlVirtualDevice kickoff() {
+    	return kickoff(null);
+    }
+	public static BPUControlVirtualDevice kickoff(BPUCallbacks callbacks) {
+		BPUControlVirtualDevice bpu = new BPUControlVirtualDevice(callbacks);
+		Thread bpuThread = new Thread(bpu);
+		bpuThread.start();
+		return bpu;
+	}
 	/* (non-Javadoc)
 	 * @see bio.digi.bpucontrol.BPUControl#run()
 	 */
@@ -202,7 +211,7 @@ public class BPUControlVirtualDevice implements Runnable, BPUControl {
         while(!stop) {
             try {
                 Thread.sleep(1000);
-                this.callbacks.outputReceived("Virtual device received output");
+                callbacks.outputReceived("Virtual device received output");
             } catch (InterruptedException e1) {
                 if(stop) {
                 	return;
